@@ -287,18 +287,20 @@ const Home = () => {
                         <p className="text-sm md:text-base font-[400] mt-1">Support</p>
                     </div>
                     </Link>
-                    <Link to="/support">
-                    <div data-aos="zoom-in" data-aos-delay="100" data-aos-duration="1500" className=" text-center  hover:-translate-y-1 duration-300 border py-2 w-[80px] sm:w-[100px] rounded-lg m-auto mb-4">
-                        <img src="/images/whatsapp.png" className="sm:w-10 sm:h-10 w-8 h-8 md:w-12 md:h-12 m-auto " alt="" />
-                        <p className="text-sm  md:text-base font-[400] ">Group</p>
-                    </div>
-                    </Link>
-                    <Link to="/support">
-                    <div data-aos="zoom-in" data-aos-delay="100" data-aos-duration="1500" className=" text-center  hover:-translate-y-1 duration-300 border py-2 w-[80px] sm:w-[100px] rounded-lg m-auto mb-4">
-                        <img src="/images/whatsapp.png" className="sm:w-10 sm:h-10 w-8 h-8 md:w-12 md:h-12 m-auto " alt="" />
-                        <p className="text-sm  md:text-base font-[400] mt-1">Whatsapp</p>
-                    </div>
-                    </Link>
+                  <a href="https://chat.whatsapp.com/KSXZMQc7ZOi6BTu1zeYzJQ" target="_blank" rel="noopener noreferrer">
+    <div data-aos="zoom-in" data-aos-delay="100" data-aos-duration="1500" className="text-center hover:-translate-y-1 duration-300 border py-2 w-[80px] sm:w-[100px] rounded-lg m-auto mb-4">
+        <img src="/images/whatsapp.png" className="sm:w-10 sm:h-10 w-8 h-8 md:w-12 md:h-12 m-auto" alt="" />
+        <p className="text-sm md:text-base font-[400]">Group</p>
+    </div>
+</a>
+
+                   <a href="https://wa.me/qr/NR7EWTRWJA2WO1" target="_blank" rel="noopener noreferrer">
+    <div data-aos="zoom-in" data-aos-delay="100" data-aos-duration="1500" className="text-center hover:-translate-y-1 duration-300 border py-2 w-[80px] sm:w-[100px] rounded-lg m-auto mb-4">
+        <img src="/images/whatsapp.png" className="sm:w-10 sm:h-10 w-8 h-8 md:w-12 md:h-12 m-auto" alt="" />
+        <p className="text-sm md:text-base font-[400] mt-1">Whatsapp</p>
+    </div>
+</a>
+
 
                     <div
           data-aos="zoom-in"
