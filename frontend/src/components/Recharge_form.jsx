@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { Button } from "@mui/material";
 import { useAuthContext } from "../authcontext/AuthContext"; // to get the auth user
+import { toast, Toaster } from "react-hot-toast"; // Import react-hot-toast
 
 export const Recharge_form = () => {
   const { authUser, authToken } = useAuthContext(); // Use AuthContext to get user details
@@ -13,20 +14,38 @@ export const Recharge_form = () => {
   const [paymentScreenshot, setPaymentScreenshot] = useState(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [planDetails, setPlanDetails] = useState(null);
+  const [formErrors, setFormErrors] = useState({});
+  const [loading, setLoading] = useState(true);
 
   // Fetch plans on component mount
   useEffect(() => {
     const fetchPlans = async () => {
       try {
         const baseURL = import.meta.env.VITE_API_BASE_URL;
-        const response = await axios.get(`${baseURL}/api/plan/all`); // Replace with your API URL
-        setPlans(response.data.plans);
+        const response = await axios.get(`${baseURL}/api/plan/all`);
+
+        if (response.status === 200) {
+          const plansData = response.data;
+          if (Array.isArray(plansData)) {
+            setPlans(plansData); // Plans is an array, set it
+          } else {
+            console.warn("Unexpected response format:", plansData);
+            setPlans([]); // If the response is not in expected format, fallback to empty array
+          }
+        } else {
+          throw new Error("Failed to fetch plans");
+        }
       } catch (error) {
         console.error("Error fetching plans:", error);
+        setPlans([]); // In case of error, fallback to empty array
+        setError("Failed to load plans. Please try again later.");
+      } finally {
+        setLoading(false); // Stop loading when fetch is complete (either success or failure)
       }
     };
+
     fetchPlans();
-  }, []);
+  }, []); // Empty dependency array ensures this runs only once on component mount
 
   const handlePlanChange = (e) => {
     const planName = e.target.value;
@@ -58,26 +77,32 @@ export const Recharge_form = () => {
     }
   };
 
+  // Form Validation
+  const validateForm = () => {
+    let errors = {};
+    if (!selectedPlan) errors.selectedPlan = "Plan is required";
+    if (!paymentMethod) errors.paymentMethod = "Payment method is required";
+    if (!taxId) errors.taxId = "Tax ID is required";
+    if (!paymentScreenshot) errors.paymentScreenshot = "Payment screenshot is required";
+    return errors;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!authUser || !authUser._id) {
-      alert("No user data found.");
-      return;
-    }
-
-    if (!selectedPlan || !paymentMethod || !taxId || !paymentScreenshot) {
-      alert("Please fill out all fields.");
-      return;
-    }
-
+  
+    const errors = validateForm();
+    setFormErrors(errors);
+  
+    // If there are validation errors, stop form submission
+    if (Object.keys(errors).length > 0) return;
+  
     // Upload the payment screenshot to Cloudinary
     const screenshotUrl = await uploadScreenshot(paymentScreenshot);
     if (!screenshotUrl) {
-      alert("Error uploading screenshot. Please try again.");
+      toast.error("Error uploading screenshot. Please try again.");
       return;
     }
-
+  
     // Prepare the form data for the purchase request
     const formData = {
       planId: planDetails._id,                // Plan ID
@@ -85,28 +110,33 @@ export const Recharge_form = () => {
       paymentScreenshot: screenshotUrl,       // URL of the uploaded screenshot
       taxId: taxId                            // Tax ID
     };
-
+  
     try {
+      
       // Send POST request to the server to purchase the plan
       const baseURL = import.meta.env.VITE_API_BASE_URL;
-      const response = await axios.post(`${baseURL}/api/userplan/purchase/${authUser._id}`, // Include the userId in the URL
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${authToken}`,  // Include auth token in request headers for authorization
-          },
-        }
-      );
-
+      const response = await axios.post(`${baseURL}/api/userplan/purchase/${authUser._id}`, formData, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,  // Include auth token in request headers for authorization
+        },
+      });
+  
       if (response.data.message === "Plan purchased successfully") {
+        toast.success("Your plan purchase is being processed. You will be notified once the payment is verified.", {
+          duration: 2000,
+          style: {
+            background: 'green',
+            color: 'white',
+          },
+        });
         setIsSubmitted(true);  // Show success message
       }
     } catch (error) {
       console.error("Error in purchase plan:", error);
-      alert("There was an issue processing your payment. Please try again.");
+      toast.error("There was an issue processing your payment. Please try again.");
     }
   };
-
+  
   // Render payment method details based on selection
   const renderPaymentMethodDetails = () => {
     switch (paymentMethod) {
@@ -114,7 +144,7 @@ export const Recharge_form = () => {
         return (
           <div className="mt-4 bg-gray-800 text-white p-4 rounded-lg">
             <h4>EasyPaisa Details:</h4>
-            <p>Bank:  (EasyPaisa)</p>
+            <p>Bank: (EasyPaisa)</p>
             <p>Name: Abdullah Zulfiqar</p>
             <p>Account No: 03472627044</p>
           </div>
@@ -155,10 +185,10 @@ export const Recharge_form = () => {
 
           {/* Plan Dropdown */}
           <div className="mb-6">
-            <label htmlFor="plan" className="block text-white mb-2">Select Plan</label>
+            <label htmlFor="plan" className="block text-white mb-2">Select Plan <span className="text-red-500">*</span></label>
             <select
               id="plan"
-              className="w-full h-10 px-3 border rounded-md"
+              className={`w-full h-10 px-3 border rounded-md ${formErrors.selectedPlan ? "border-red-500" : ""}`}
               onChange={handlePlanChange}
               value={selectedPlan}
             >
@@ -169,14 +199,15 @@ export const Recharge_form = () => {
                 </option>
               ))}
             </select>
+            {formErrors.selectedPlan && <p className="text-red-500 text-xs">{formErrors.selectedPlan}</p>}
           </div>
 
           {/* Payment Method Dropdown */}
           <div className="mb-6">
-            <label htmlFor="paymentMethod" className="block text-white mb-2">Select Payment Method</label>
+            <label htmlFor="paymentMethod" className="block text-white mb-2">Select Payment Method <span className="text-red-500">*</span></label>
             <select
               id="paymentMethod"
-              className="w-full h-10 px-3 border rounded-md"
+              className={`w-full h-10 px-3 border rounded-md ${formErrors.paymentMethod ? "border-red-500" : ""}`}
               onChange={(e) => setPaymentMethod(e.target.value)}
             >
               <option value="">-- Select Payment Method --</option>
@@ -186,6 +217,7 @@ export const Recharge_form = () => {
                 </option>
               ))}
             </select>
+            {formErrors.paymentMethod && <p className="text-red-500 text-xs">{formErrors.paymentMethod}</p>}
           </div>
 
           {/* Show Selected Plan Price and Payment Method */}
@@ -199,19 +231,23 @@ export const Recharge_form = () => {
           )}
 
           {/* Tax ID and Payment Screenshot */}
+          <span className="text-red-500">*</span>
           <div className="mb-6">
             <input
               type="text"
               placeholder="Enter Tax ID"
-              className="w-full p-2 border rounded-md mb-4"
+              className={`w-full p-2 border rounded-md mb-4 ${formErrors.taxId ? "border-red-500" : ""}`}
               value={taxId}
               onChange={(e) => setTaxId(e.target.value)}
             />
+            {formErrors.taxId && <p className="text-red-500 text-xs">{formErrors.taxId}</p>}
+            <span className="text-red-500">*</span>
             <input
               type="file"
-              className="mb-4 w-full"
+              className={`mb-4 w-full ${formErrors.paymentScreenshot ? "border-red-500" : ""}`}
               onChange={handleScreenshotChange}
             />
+            {formErrors.paymentScreenshot && <p className="text-red-500 text-xs">{formErrors.paymentScreenshot}</p>}
           </div>
 
           {/* Submit Button */}
@@ -233,11 +269,13 @@ export const Recharge_form = () => {
             data-aos-duration="1000"
             className="mt-10 w-full max-w-md bg-green-50 p-6 rounded-lg border"
           >
-            <h2 className="text-base lg:text-xl font-[700]">Your plan purchase is being processed.</h2>
-            <p className="text-gray-700">You will be notified once the payment is verified.</p>
+         
           </div>
         )}
       </div>
+
+      {/* Toast container for success/error messages */}
+      <Toaster position="top-center" />
     </div>
   );
 };

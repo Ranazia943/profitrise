@@ -10,14 +10,14 @@ const About = () => {
         <div className="wrapper max-w-7xl border-8 border-white m-auto mt-20 mb-28">
             <div className="banner bg-[url('/images/about.jpg')] hover:-translate-y-2 duration-300 hover:shadow-lg hover:shadow-green-200 relative after:absolute after:inset-0 after:bg-black after:opacity-60 rounded-xl overflow-hidden bg-cover bg-no-repeat h-[300px] flex justify-center items-center">
             <div className=" z-50 text-center">
-                <h2 className=" text-4xl font-[800] text-white mx-1">About Goldmine3x.com</h2>
+                <h2 className=" text-4xl font-[800] text-white mx-1">About profitrise3x.com</h2>
                 <p className=" text-xl mt-2 font-[500] text-white">Your trusted partner in smart investments</p>
             </div>
             </div>
             <div className="cards grid grid-cols-1 md:grid-cols-2 gap-12 mt-10">
                 <div data-aos="zoom-in" data-aos-duration="1500" className="card hover:-translate-y-2 duration-300 hover:shadow-green-200 p-4 border shadow-lg rounded-lg">
                     <h2 className=" text-3xl font-[600] text-green-400">Who We Are</h2>
-                    <p className=" text-xl font-[400] text-gray-600 mt-2">Goldmine3x.com is an innovative investment platform designed to help you grow your wealth. With a focus on transparency, security, and high returns, we empower investors to achieve their financial goals.</p>
+                    <p className=" text-xl font-[400] text-gray-600 mt-2">profitrise3x.com is an innovative investment platform designed to help you grow your wealth. With a focus on transparency, security, and high returns, we empower investors to achieve their financial goals.</p>
                 </div>
                 <div data-aos="zoom-in" data-aos-duration="2000" className="card hover:-translate-y-2 duration-300 hover:shadow-green-200 p-4 border shadow-lg rounded-lg">
                     <h2 className=" text-3xl font-[600] text-green-400">Our Mission</h2>
@@ -41,10 +41,10 @@ const About = () => {
           aria-controls="panel1-content"
           id="panel1-header"
         >
-          What is Goldmine3x.com?
+          What is profitrise3x.com?
         </AccordionSummary>
         <AccordionDetails>
-        Goldmine3x.com is an investment platform that allows users to grow their wealth through secure and transparent investment plans.
+        profitrise3x.com is an investment platform that allows users to grow their wealth through secure and transparent investment plans.
         </AccordionDetails>
       </Accordion>
             <Accordion>

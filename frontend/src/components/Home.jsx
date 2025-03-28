@@ -14,6 +14,8 @@ const Home = () => {
   const [error, setError] = useState(null);
   const { authUser } = useAuthContext();
   const [isLoading, setIsLoading] = useState(true);
+  const [totalDeposit, setTotalDeposit] = useState(0); // Added state for total deposit
+
   const navigate = useNavigate();
 
   const logout = () => {
@@ -33,7 +35,36 @@ const Home = () => {
       setIsLoading(false); // Simulating data load completion after 3 seconds
     }, 1000);
   }, []);
-
+  useEffect(() => {
+    if (authUser) {
+      const fetchTotalDeposit = async () => {
+        try {
+          const token = authUser.token || localStorage.getItem("token");
+          if (!token) throw new Error("No token found, authorization denied.");
+          const baseURL = import.meta.env.VITE_API_BASE_URL;
+  
+          // Update the URL to match the backend route
+          const response = await axios.get(`${baseURL}/api/userplan/user/${authUser._id}/total-deposit`, {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          });
+  
+          if (response.status === 200) {
+            setTotalDeposit(response.data.totalDeposit);
+          } else {
+            console.error("Failed to fetch total deposit");
+          }
+        } catch (error) {
+          console.error("Error fetching total deposit:", error);
+        setTotalDeposit(0); // Set to 0 in case of any error
+        }
+      };
+  
+      fetchTotalDeposit();
+    }
+  }, [authUser]);
   useEffect(() => {
     if (authUser) {
       const fetchTeamData = async () => {
@@ -41,30 +72,33 @@ const Home = () => {
           const token = authUser.token || localStorage.getItem("token");
           if (!token) throw new Error("No token found, authorization denied.");
           const baseURL = import.meta.env.VITE_API_BASE_URL;
-          
-          const response = await fetch(`${baseURL}/api/userplan/user/${authUser._id}`,
-            {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
+
+          const response = await fetch(`${baseURL}/api/userplan/user/${authUser._id}`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          });
 
           const data = await response.json();
-          console.log("API Response:", data);
 
           if (response.ok) {
-            setTeamData(data);
-            setLoading(false);
+            if (!data) {
+              setError("User data is not available.");
+              setTeamData(null);
+            } else {
+              setTeamData(data);
+              setLoading(false);
+            }
           } else {
             throw new Error(data.message || "Failed to fetch team data.");
           }
         } catch (error) {
           console.error("Error fetching team data:", error);
-          setError(error.message);
+          setError("Failed to load user data. Please try again later.");
           setLoading(false);
+          setTeamData(null);
         }
       };
 
@@ -76,13 +110,24 @@ const Home = () => {
     const fetchPlans = async () => {
       try {
         const baseURL = import.meta.env.VITE_API_BASE_URL;
-
         const response = await axios.get(`${baseURL}/api/plan/all`);
-        setPlans(response.data.plans);
-        setLoading(false);
+
+        if (response.status === 200) {
+          const plansData = response.data;
+          if (Array.isArray(plansData)) {
+            setPlans(plansData); 
+          } else {
+            console.warn("Unexpected response format:", plansData);
+            setPlans([]); 
+          }
+        } else {
+          throw new Error("Failed to fetch plans");
+        }
       } catch (error) {
         console.error("Error fetching plans:", error);
-        setError("Failed to fetch plans");
+        setPlans([]);
+        setError("Failed to load plans. Please try again later.");
+      } finally {
         setLoading(false);
       }
     };
@@ -97,38 +142,34 @@ const Home = () => {
           const token = authUser.token || localStorage.getItem("token");
           if (!token) throw new Error("No token found, authorization denied.");
           const baseURL = import.meta.env.VITE_API_BASE_URL;
-  
+
           const response = await axios.get(`${baseURL}/api/withdrawl/${authUser._id}`, {
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
             },
           });
-  
-          console.log("Withdrawal History Data:", response.data);
-  
-          // Check if data is available, otherwise, set empty array
+
           if (response.data && response.data.data) {
             setWithdrawalHistory(response.data.data);
           } else {
-            setWithdrawalHistory([]); // Set empty array if no data
+            setWithdrawalHistory([]); 
           }
-  
-          setLoading(false); // Set loading to false after data is fetched
+
+          setLoading(false);
         } catch (error) {
-          // Handle error by setting empty array and not showing error message
           console.error("Error fetching withdrawal history:", error);
-          setWithdrawalHistory([]); // Set withdrawal history to empty array
-          setLoading(false); // Set loading to false
+          setWithdrawalHistory([]); 
+          setLoading(false);
         }
       };
-  
+
       fetchWithdrawalHistory();
     }
   }, [authUser]);
 
   const totalWithdrawn = withdrawalHistory
-    .filter((withdrawal) => withdrawal.status === "completed") // Filter out pending withdrawals
+    .filter((withdrawal) => withdrawal.status === "completed")
     .reduce((total, withdrawal) => total + withdrawal.amount, 0);
 
   if (loading) {
@@ -136,11 +177,11 @@ const Home = () => {
   }
 
   if (error) {
-    return <div>Error: {error}</div>;
+    return <div>{error}</div>;
   }
 
   if (!Teamdata) {
-    return <div><Loading/></div>;
+    return <div>No user data available. Please contact support.</div>;
   }
 
   const { totalBalance, user } = Teamdata;
@@ -185,14 +226,15 @@ const Home = () => {
             <div className="pb-2 flex justify-between items-center">
               <div>
                 <p className="text-lg">Your Earning</p>
-                <span className="text-xl  font-[500]">Rs.{totalBalance}</span>
+                <span className="text-xl font-[500]">
+                      Rs.{totalBalance || "0.00"}
+                    </span>
                 </div>
               <div>
-                <p className="text-base  text-end">Deposit Wallet</p>
-                <h2>
-                <span className="text-xl  font-[500]">🌕Rs. {totalWithdrawn.toFixed(2)}</span>
-
-                </h2>
+              <p className="text-base text-end">Total Deposit </p>
+                    <h2>
+                      <span className="text-xl font-[500]">💰Rs. {totalDeposit.toFixed(2)}</span>
+                    </h2>
               </div>
             </div>
             <div className="flex items-center border-t p-4 justify-between">
@@ -289,6 +331,12 @@ const Home = () => {
                     </Link>
                     <Link to="/support">
                     <div data-aos="zoom-in" data-aos-delay="100" data-aos-duration="1500" className=" text-center  hover:-translate-y-1 duration-300 border py-2 w-[80px] sm:w-[100px] rounded-lg m-auto mb-4">
+                        <img src="/images/youtube.png" className="sm:w-10 sm:h-10 w-8 h-8 md:w-12 md:h-12 m-auto " alt="" />
+                        <p className="text-sm  md:text-base font-[400] ">Youtube </p>
+                    </div>
+                    </Link>
+                    <Link to="/support">
+                    <div data-aos="zoom-in" data-aos-delay="100" data-aos-duration="1500" className=" text-center  hover:-translate-y-1 duration-300 border py-2 w-[80px] sm:w-[100px] rounded-lg m-auto mb-4">
                         <img src="/images/whatsapp.png" className="sm:w-10 sm:h-10 w-8 h-8 md:w-12 md:h-12 m-auto " alt="" />
                         <p className="text-sm  md:text-base font-[400] ">Group</p>
                     </div>
@@ -324,47 +372,39 @@ const Home = () => {
             </div>
          </div>
          <div className="investment mt-10 mx-4 md:mx-10 lg:mx-16 pb-28">
-      <h2 className="text-center my-8 text-3xl font-[600] font-sans">Investment Plans</h2>
-      <div className="wrapper grid grid-cols-1 min-[700px]:grid-cols-2 gap-4 md:gap-6 lg:gap-8">
-        {plans.map((plan) => (
-          <div
-            key={plan._id}
-            data-aos="zoom-in"
-            data-aos-duration="1000"
-            className="p-4 border max-[700px]:w-[400px] max-[700px]:mx-auto max-[500px]:w-full group rounded-lg hover:-translate-y-2 duration-300 overflow-hidden"
-          >
-            <h2 className="text-center font-[700] text-xl my-2 rounded-lg ">{plan.name}</h2>
-            <div className="wrapp flex justify-between items-end">
-              <div>
-                <p>
-                  <span className="text-lg font-[500]">Price : </span>
-                  <span className=" font-[350] text-base">Rs. {plan.price}</span>
-                </p>
-                <p>
-                  <span className="text-lg  font-[500]">Duration : </span>
-                  <span className=" font-[350] text-base">{plan.duration} Days</span>
-                </p>
-                <p>
-                  <span className="text-lg  font-[500]">Daily Profit : </span>
-                  <span className=" font-[350] text-base">Rs. {plan.dailyProfit}</span>
-                </p>
-                <p>
-                  <span className="text-lg  font-[500]">Total Profit : </span>
-                  <span className=" font-[350] text-base">Rs. {plan.totalProfit}</span>
-                </p>
-              </div>
-              <div>
-                <Link to="/addamount">
-                <button className='px-4 py-2 text-lg font-[500] bg-green-500 rounded-md text-white group-hover:bg-green-700 duration-300'>
-                  Buy Plan
-                </button>
-                </Link>
-              </div>
+            <h2 className="text-center my-8 text-3xl font-[600] font-sans">Investment Plans</h2>
+            <div className="wrapper grid grid-cols-1 min-[700px]:grid-cols-2 gap-4 md:gap-6 lg:gap-8">
+              {plans.length > 0 ? (
+                plans.map((plan) => (
+                  <div
+                    key={plan._id}
+                    data-aos="zoom-in"
+                    data-aos-duration="1000"
+                    className="p-4 border max-[700px]:w-[400px] max-[700px]:mx-auto max-[500px]:w-full group rounded-lg hover:-translate-y-2 duration-300 overflow-hidden"
+                  >
+                    <h2 className="text-center font-[700] text-xl my-2 rounded-lg">{plan.name}</h2>
+                    <div className="wrapp flex justify-between items-end">
+                      <div>
+                        <p><span className="text-lg font-[500]">Price: </span><span className="font-[350] text-base">Rs. {plan.price}</span></p>
+                        <p><span className="text-lg font-[500]">Duration: </span><span className="font-[350] text-base">{plan.duration} Days</span></p>
+                        <p><span className="text-lg font-[500]">Daily Profit: </span><span className="font-[350] text-base">Rs. {plan.dailyProfit}</span></p>
+                        <p><span className="text-lg font-[500]">Total Profit: </span><span className="font-[350] text-base">Rs. {plan.totalProfit}</span></p>
+                      </div>
+                      <div>
+                        <Link to="/addamount">
+                          <button className='px-4 py-2 text-lg font-[500] bg-green-500 rounded-md text-white group-hover:bg-green-700 duration-300'>
+                            Buy Plan
+                          </button>
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div>No plans available at the moment</div>
+              )}
             </div>
           </div>
-        ))}
-      </div>
-    </div>
         </div>
     </div>
       )}

@@ -2,20 +2,11 @@ import mongoose from 'mongoose';
 
 const taskSchema = new mongoose.Schema(
   {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    planId: { type: mongoose.Schema.Types.ObjectId, ref: 'Plan', required: true },
-    type: { 
-      type: String, 
-      enum: ['website visit', 'youtube video'], 
-      required: true 
-    },
+    planId: { type: mongoose.Schema.Types.ObjectId, ref: 'Plan', required: true }, // Plan reference
+    type: { type: String, required: true },  // 'website visit' or 'youtube video'
     url: { type: String, required: true },
     price: { type: Number, required: true },
-    status: { 
-      type: String, 
-      enum: ['pending', 'completed'], 
-      default: 'pending' 
-    },
+    status: { type: String, default: 'pending' },
     startDate: { type: Date, default: Date.now },
     endDate: { type: Date },
   },

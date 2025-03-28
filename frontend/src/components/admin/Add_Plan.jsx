@@ -1,91 +1,144 @@
+import { useState ,useEffect} from "react";
+import axios from "axios";
+import { toast } from "react-hot-toast"; // For showing toast notifications
+import { useAuthContext } from "../../authcontext/AuthContext";
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import Groups2Icon from '@mui/icons-material/Groups2';
 // import LocalShippingIcon from '@mui/icons-material/LocalShipping';
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import WorkIcon from '@mui/icons-material/Work';
 import ForumIcon from '@mui/icons-material/Forum';
 import SportsKabaddiIcon from '@mui/icons-material/SportsKabaddi';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
-import { Button } from '@mui/material';
-import { CurrencyExchange } from '@mui/icons-material';
-import { toast } from "react-hot-toast";
+import { CurrencyExchange, Logout,  } from '@mui/icons-material';
+import { Button } from "@mui/material"; // Add this line if it's missing
 
 const Add_Plan = () => {
-    const [side, setSide] = useState(false)
-    const [isactive, setIsactive] = useState(0)
-    const [isopentoggle, setIsopentoggle] = useState(false)
+  const [plans, setPlans] = useState([]);
+   
+  const [side, setSide] = useState(false)
+  const [isactive, setIsactive] = useState(0)
+  const [isopentoggle, setIsopentoggle] = useState(false)
+  const isopen = (ind)=>{
+    setIsactive(ind)
+    setIsopentoggle(!isopentoggle)
+}
+    // To store the predefined plans
+  const [formData, setFormData] = useState({
+    name: "",
+    price: "",
+    duration: "",
+    dailyProfit: "",
+    totalProfit: "",
+  });
 
-    const [formData, setFormData] = useState({
-      name: "",
-      price: "",
-      duration: "",
-      dailyProfit: "",
-      totalProfit: "",
-      startDate: "",
-      endDate: "",
+  const [message, setMessage] = useState(""); // Message state for success/error
+
+  useEffect(() => {
+    // Fetch predefined plan names from the backend or static list
+    const predefinedPlans = [
+      'Start',
+      'Basic',
+      'Gold',
+      'Platinum',
+      'Diamond',
+    ];
+
+    setPlans(predefinedPlans); // Set the predefined plans to state
+  }, []);
+
+  // Handle plan selection change
+  const handlePlanSelect = (event) => {
+    const selectedPlan = event.target.value;
+    setFormData({
+      ...formData,
+      name: selectedPlan, // set the selected plan name
     });
-  
-    // Handle form input changes
-    const handleInputChange = (e) => {
-      const { name, value } = e.target;
-      setFormData((prevData) => ({
-        ...prevData,
-        [name]: value,
-      }));
-    };
-  
-    // Handle form submission
-    const handleSubmit = async (e) => {
-      e.preventDefault();
-    
-      // Convert price and totalProfit to numbers if they are strings
-      const formDataToSend = {
-        ...formData,
-        price: Number(formData.price),  // Convert to number
-        totalProfit: Number(formData.totalProfit),  // Convert to number
-      };
-    
-      try {
-        const baseURL = import.meta.env.VITE_API_BASE_URL;
-        const response = await fetch(`${baseURL}/api/plan/add`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(formDataToSend),
-        });
-    
-        const data = await response.json();
-        if (response.ok) {
-          toast.success("Plan added successfully!");
-          setFormData({
-            name: "",
-            price: "",
-            duration: "",
-            dailyProfit: "",
-            totalProfit: "",
-            startDate: "",
-            endDate: "",
-          });
-        } else {
-          toast.error(data.message || "Failed to add the plan.");
-        }
-      } catch (error) {
-        toast.error("Error creating plan. Please try again later.");
-      }
-    };
-    
-    const isopen = (ind)=>{
-        setIsactive(ind)
-        setIsopentoggle(!isopentoggle)
+  };
+
+  // Handle form input changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setMessage(""); // Reset message before submitting
+
+    // Validate form data before sending
+    if (!formData.name || !formData.price || !formData.duration || !formData.dailyProfit || !formData.totalProfit) {
+      setMessage("All fields are required.");
+      return;
     }
+
+    const formDataToSend = {
+      ...formData,
+      price: Number(formData.price),
+      totalProfit: Number(formData.totalProfit),
+      duration: Number(formData.duration),
+    };
+
+    try {
+      const baseURL = import.meta.env.VITE_API_BASE_URL;
+
+      // First, check if the plan already exists
+      const checkResponse = await fetch(`${baseURL}/api/plan/check/${formData.name}`);
+      const checkData = await checkResponse.json();
+
+      if (!checkResponse.ok) {
+        toast.error(`Plan "${formData.name}" already exists.`);
+        return;
+      }
+
+      // Now proceed with the actual plan creation
+      const response = await fetch(`${baseURL}/api/plan/add`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formDataToSend),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setMessage("Plan added successfully!");
+        toast.success("Plan added successfully!", {
+          duration: 4000,
+          position: "top-center",
+         
+          style: {
+            background: "#4CAF50",
+            color: "white",
+            borderRadius: "8px",
+          },
+        });
+        setFormData({
+          name: "",
+          price: "",
+          duration: "",
+          dailyProfit: "",
+          totalProfit: "",
+        });
+      } else {
+        setMessage(data.message || "Failed to add the plan.");
+      }
+    } catch (error) {
+      setMessage("Error creating plan. Please try again later.");
+    }
+  };
+
   return (
-   <div>
-     <div className="dashboard-wrapper">
-     <div id="sidebar-wrapper" className={`${side ? "open":""}`}>
+
+    <div className="dashboard-wrapper">
+
+ <div id="sidebar-wrapper" className={`${side ? "open":""}`}>
             <div className="sidebar">
             <div className="close-icon flex justify-start ml-4  mt-4">
              <i onClick={()=>setSide(false)} className="fa-solid border-2 px-1 rounded-md fa-xmark text-xl side-menu"></i>
@@ -186,51 +239,55 @@ const Add_Plan = () => {
                     </div>
                   </Link>
                 </li>
+
+               
             </ul>
             </div>
         </div>
-      <div className="dashboard-side min-h-screen ">
-            <div className="close-icon bg-white inline-block">
+        <div className="dashboard-side min-h-screen">
+      <div className="close-icon bg-white inline-block">
              <i onClick={()=>setSide(true)} className="fa-solid fa-bars m-2 text-lg side-menu"></i>
             </div>
-       <div className=" text-center" data-aos="fade-right"  data-aos-easing="linear" data-aos-duration="1800">
-       <h2 className="text-2xl font-extrabold bg-gradient-to-tr from-cyan-300 via-cyan-100 inline-block px-16 rounded-full text-gray-600 py-4">Add user</h2>
-       </div>
-        <div>
-       
-
-    <div className="wrapper">
-      <div className="max-w-4xl mx-auto font-[sans-serif] p-6">
+        <div className="max-w-4xl mx-auto font-[sans-serif] p-6">
         <div className="text-center mb-16">
-          <a href="javascript:void(0)">
-            <img src="/images/min.jpg" alt="logo" className="w-20 inline-block" />
-          </a>
           <h4 className="text-gray-800 text-lg font-[600] mt-6">Create Your Plan</h4>
         </div>
         <form onSubmit={handleSubmit}>
+      
           <div className="grid sm:grid-cols-2 gap-8">
             <div>
-              <label className="text-gray-800 text-sm mb-2 block">Plan Name</label>
-              <input
+              <label className="text-gray-800 text-sm mb-2 block">Select Plan</label>
+              <select
                 name="name"
-                type="text"
                 value={formData.name}
-                onChange={handleInputChange}
+                onChange={handlePlanSelect}
                 className="bg-gray-100 w-full text-gray-800 text-sm px-4 py-3.5 rounded-md focus:bg-transparent outline-blue-500 transition-all"
-                placeholder="Premimum Plan"
-              />
+                required
+              >
+                <option value="">-- Select Plan --</option>
+                {plans.map((plan, index) => (
+                  <option key={index} value={plan}>
+                    {plan}
+                  </option>
+                ))}
+              </select>
             </div>
+
+            {/* Price */}
             <div>
               <label className="text-gray-800 text-sm mb-2 block">Price</label>
               <input
                 name="price"
-                type="text"
+                type="number"
                 value={formData.price}
                 onChange={handleInputChange}
                 className="bg-gray-100 w-full text-gray-800 text-sm px-4 py-3.5 rounded-md focus:bg-transparent outline-blue-500 transition-all"
                 placeholder="50000"
+                required
               />
             </div>
+
+            {/* Duration */}
             <div>
               <label className="text-gray-800 text-sm mb-2 block">Duration</label>
               <input
@@ -240,19 +297,25 @@ const Add_Plan = () => {
                 onChange={handleInputChange}
                 className="bg-gray-100 w-full text-gray-800 text-sm px-4 py-3.5 rounded-md focus:bg-transparent outline-blue-500 transition-all"
                 placeholder="60"
+                required
               />
             </div>
+
+            {/* Daily Profit */}
             <div>
               <label className="text-gray-800 text-sm mb-2 block">Daily Profit</label>
               <input
                 name="dailyProfit"
-                type="text"
+                type="number"
                 value={formData.dailyProfit}
                 onChange={handleInputChange}
                 className="bg-gray-100 w-full text-gray-800 text-sm px-4 py-3.5 rounded-md focus:bg-transparent outline-blue-500 transition-all"
                 placeholder="200"
+                required
               />
             </div>
+
+            {/* Total Profit */}
             <div>
               <label className="text-gray-800 text-sm mb-2 block">Total Profit</label>
               <input
@@ -262,41 +325,22 @@ const Add_Plan = () => {
                 onChange={handleInputChange}
                 className="bg-gray-100 w-full text-gray-800 text-sm px-4 py-3.5 rounded-md focus:bg-transparent outline-blue-500 transition-all"
                 placeholder="500000"
-              />
-            </div>
-            <div>
-              <label className="text-gray-800 text-sm mb-2 block">Start Date</label>
-              <input
-                name="startDate"
-                type="date"
-                value={formData.startDate}
-                onChange={handleInputChange}
-                className="bg-gray-100 w-full text-gray-800 text-sm px-4 py-3.5 rounded-md focus:bg-transparent outline-blue-500 transition-all"
-              />
-            </div>
-            <div>
-              <label className="text-gray-800 text-sm mb-2 block">End Date</label>
-              <input
-                name="endDate"
-                type="date"
-                value={formData.endDate}
-                onChange={handleInputChange}
-                className="bg-gray-100 w-full text-gray-800 text-sm px-4 py-3.5 rounded-md focus:bg-transparent outline-blue-500 transition-all"
+                required
               />
             </div>
           </div>
+
           <div className="!mt-12">
             <Button variant="contained" type="submit">Create Plan</Button>
           </div>
         </form>
-     
-         
-        </div>
-        </div>
-    
-</div></div></div></div>
-   
-  )
-}
 
-export default Add_Plan
+        {/* Show message here */}
+       
+      </div>
+    </div>
+    </div>
+  );
+};
+
+export default Add_Plan;

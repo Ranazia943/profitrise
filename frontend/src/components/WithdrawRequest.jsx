@@ -2,10 +2,10 @@ import { useState } from "react";
 import { Button } from "@mui/material";
 import { toast } from "react-hot-toast";
 import axios from "axios";
-import { useAuthContext } from "../authcontext/AuthContext";  // Adjust path if necessary
+import { useAuthContext } from "../authcontext/AuthContext";
 
 const WithdrawRequest = () => {
-  const { authUser } = useAuthContext();  // Get the authenticated user from context
+  const { authUser } = useAuthContext();
   const [amount, setAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [gatewayAccountName, setGatewayAccountName] = useState("");
@@ -13,12 +13,18 @@ const WithdrawRequest = () => {
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [error, setError] = useState('');
+  const MIN_WITHDRAWAL_AMOUNT = 150; // Minimum withdrawal amount in rupees
 
-  // Function to send the withdrawal request
   const withdrawRequest = async (amount, paymentMethod, gatewayAccountName, gatewayAccountNumber) => {
     // Validate inputs
     if (!amount || !paymentMethod || !gatewayAccountName || !gatewayAccountNumber) {
       toast.error("Please fill in all fields");
+      return;
+    }
+
+    // Validate minimum withdrawal amount
+    if (Number(amount) < MIN_WITHDRAWAL_AMOUNT) {
+      toast.error(`Minimum withdrawal amount is ${MIN_WITHDRAWAL_AMOUNT} rupees`);
       return;
     }
 
@@ -28,9 +34,7 @@ const WithdrawRequest = () => {
       return;
     }
 
-    // Fetch the token (same as in the Teams component)
     const token = authUser.token || localStorage.getItem("token");
-
     if (!token) {
       toast.error("No token found, authorization denied.");
       return;
@@ -38,7 +42,6 @@ const WithdrawRequest = () => {
 
     setLoading(true);
     try {
-      // Prepare the request data
       const requestData = {
         amount,
         paymentGateway: paymentMethod,
@@ -46,12 +49,9 @@ const WithdrawRequest = () => {
         gatewayAccountNumber,
       };
 
-      // Log the request data (for debugging purposes)
-      console.log("Sending withdrawal request with data:", requestData);
-
-      // Send the request to the backend with token in the Authorization header
       const baseURL = import.meta.env.VITE_API_BASE_URL;
-      const response = await axios.post(`${baseURL}/api/withdrawl/request/${authUser._id}`,
+      const response = await axios.post(
+        `${baseURL}/api/withdrawl/request/${authUser._id}`,
         requestData,
         {
           headers: {
@@ -61,14 +61,15 @@ const WithdrawRequest = () => {
         }
       );
 
-      // Log the response from the server (for debugging purposes)
-      console.log("Server Response:", response.data);
-
-      // Handle success or error
       if (response.data.message) {
         setSuccessMessage(response.data.message);
         setError('');
-        toast.success(response.data.message);  // Show success message to user
+        toast.success(response.data.message);
+        // Clear form on success
+        setAmount("");
+        setPaymentMethod("");
+        setGatewayAccountName("");
+        setGatewayAccountNumber("");
       }
     } catch (err) {
       console.error("Error occurred:", err);
@@ -80,7 +81,6 @@ const WithdrawRequest = () => {
     }
   };
 
-  // Form submit handler
   const handleSubmit = async (e) => {
     e.preventDefault();
     await withdrawRequest(amount, paymentMethod, gatewayAccountName, gatewayAccountNumber);
@@ -94,8 +94,8 @@ const WithdrawRequest = () => {
           onSubmit={handleSubmit}
         >
           <h2 className="text-2xl font-[800] my-4 text-center text-white">Withdraw Request</h2>
-
-          {/* Amount Input */}
+          
+          {/* Amount Input with minimum amount hint */}
           <div className="my-4">
             <input
               type="number"
@@ -103,10 +103,12 @@ const WithdrawRequest = () => {
               id="amount"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder="Enter Amount"
+              placeholder={`Minimum ${MIN_WITHDRAWAL_AMOUNT} rupees`}
               className="w-full h-10 p-2 rounded-md"
+              min={MIN_WITHDRAWAL_AMOUNT}
               required
             />
+            <p className="text-gray-300 text-sm mt-1">Minimum withdrawal: {MIN_WITHDRAWAL_AMOUNT} rupees</p>
           </div>
 
           {/* Payment Method Dropdown */}
@@ -160,7 +162,12 @@ const WithdrawRequest = () => {
 
           {/* Submit Button */}
           <div className="text-center">
-            <Button variant="contained" type="submit" sx={{ background: "#4ade80" }} disabled={loading}>
+            <Button 
+              variant="contained" 
+              type="submit" 
+              sx={{ background: "#4ade80" }} 
+              disabled={loading || (amount && Number(amount) < MIN_WITHDRAWAL_AMOUNT)}
+            >
               {loading ? "Submitting..." : "Submit Request"}
             </Button>
           </div>

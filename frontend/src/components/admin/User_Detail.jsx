@@ -241,17 +241,7 @@ const User_Detail = () => {
   </Tooltip>
 
   {/* Check for plan status, only show "Assign Task" button if the plan is not 'pending', 'completed', or 'rejected' */}
-  {plan.state !== 'pending' && plan.state !== 'completed' && plan.state !== 'rejected' && (
-    <Button
-      variant="contained"
-      color="primary"
-      startIcon={<WorkIcon />}
-      onClick={() => handleAssignTask(plan.planId)}  // Pass both userId and planId here
-      sx={{ marginLeft: 2 }}  // Add margin-left for spacing between the buttons
-    >
-      Assign Task
-    </Button>
-  )}
+ 
 </div>
 
 

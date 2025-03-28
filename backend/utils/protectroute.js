@@ -21,8 +21,8 @@ const protect = async (req, res, next) => {
       return res.status(401).json({ message: "User not found." });
     }
 
-    // Attach userId to the request object
-    req.userId = decoded.id; // Ensure userId is properly set
+    // Attach the full user object to the request
+    req.user = user; // Attach the entire user object, not just the userId
     next();
   } catch (error) {
     console.error("JWT Verification Error:", error); // Log the error
@@ -31,3 +31,4 @@ const protect = async (req, res, next) => {
 };
 
 export default protect;
+

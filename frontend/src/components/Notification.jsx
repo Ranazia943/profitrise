@@ -1,30 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import { Delete, GppGood } from "@mui/icons-material";
-import { useAuthContext } from '../authcontext/AuthContext';  // Import the custom hook to access the auth context
-import toast from 'react-hot-toast'; // Import react-hot-toast for success message
+import { useAuthContext } from '../authcontext/AuthContext';
+import toast from 'react-hot-toast';
 
 const Notification = () => {
-  const { authUser } = useAuthContext();  // Access the authUser from the context
+  const { authUser } = useAuthContext();
   const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
-    if (!authUser) {
-      return; // If there's no user, don't try to fetch notifications
-    }
+    if (!authUser) return;
 
     const fetchNotifications = async () => {
       try {
         const baseURL = import.meta.env.VITE_API_BASE_URL;
-        const response = await fetch(`${baseURL}/api/withdrawl/notifications/${authUser._id}`);  // Use authUser._id
+        const response = await fetch(`${baseURL}/api/withdrawl/notifications/${authUser._id}`);
         const data = await response.json();
-        setNotifications(data.notifications); // Set the notifications to state
+        setNotifications(data.notifications);
       } catch (error) {
         console.error('Error fetching notifications:', error);
       }
     };
 
     fetchNotifications();
-  }, [authUser]);  // Re-run effect if authUser changes
+  }, [authUser]);
 
   const markAsRead = (id) => {
     setNotifications(notifications.map(notification =>
@@ -36,20 +34,13 @@ const Notification = () => {
     try {
       const baseURL = import.meta.env.VITE_API_BASE_URL;
       const response = await fetch(`${baseURL}/api/withdrawl/notifications/${notificationId}`, {
-        method: 'DELETE', // DELETE request
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to delete notification');
-      }
-
-      // Remove the deleted notification from the state
+      if (!response.ok) throw new Error('Failed to delete notification');
+      
       setNotifications(notifications.filter(notification => notification._id !== notificationId));
-
-      // Show success message
       toast.success('Notification deleted successfully');
     } catch (error) {
       console.error('Error deleting notification:', error);
@@ -58,36 +49,83 @@ const Notification = () => {
   };
 
   return (
-    <div>
-      <div className="wrapper">
-        <div className="cards space-y-4 w-[95%] md:w-[90%] mx-auto mt-20">
-          {notifications.length > 0 ? (
-            notifications.map((notification, index) => (
-              <div key={index} className="card relative border flex-1 rounded-lg px-2 py-4 shadow-lg duration-300 hover:-translate-y-2 hover:shadow-green-100 flex justify-between items-center" 
-                   style={{ backgroundColor: notification.isRead ? '#f0f0f0' : '#e3f2fd' }}>
-                <div className="flex items-center gap-4 md:gap-16">
-                  <div className="ml-2 md:ml-10">
-                    <GppGood sx={{ color: notification.type === 'alert' ? 'red' : 'green' }} />
-                  </div>
-                  <div>
-                    <h2 className="text-base md:text-lg lg:text-xl font-[500]" style={{ color: notification.type === 'alert' ? 'red' : 'green' }}>
-                      {notification.title}
-                    </h2>
-                    <h4 className="text-[1.3vw] font-[400]" style={{ color: notification.type === 'alert' ? 'red' : 'green' }}>
-                      {notification.message}
-                    </h4>
-                  </div>
+    <div style={{ padding: '20px', maxWidth: '100%', margin: '0 auto' }}>
+      <h1 style={{
+        fontSize: '24px',
+        fontWeight: '600',
+        marginBottom: '20px',
+        textAlign: 'center',
+        color: '#333'
+      }}>Notifications</h1>
+      
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '15px',
+        width: '100%',
+        maxWidth: '800px',
+        margin: '0 auto'
+      }}>
+        {notifications.length > 0 ? (
+          notifications.map((notification, index) => (
+            <div 
+              key={index} 
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '15px',
+                borderRadius: '8px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                backgroundColor: notification.isRead ? '#f8f9fa' : '#e3f2fd',
+                borderLeft: `4px solid ${notification.type === 'alert' ? '#ff4444' : '#00C851'}`,
+                transition: 'all 0.3s ease',
+                width: '100%'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <GppGood style={{ 
+                  color: notification.type === 'alert' ? '#ff4444' : '#00C851',
+                  fontSize: '24px'
+                }} />
+                <div>
+                  <h3 style={{
+                    fontSize: '18px',
+                    fontWeight: '500',
+                    margin: '0 0 5px 0',
+                    color: notification.type === 'alert' ? '#ff4444' : '#00C851'
+                  }}>
+                    {notification.title}
+                  </h3>
+                  <p style={{
+                    fontSize: '16px',
+                    margin: '0',
+                    color: '#555'
+                  }}>
+                    {notification.message}
+                  </p>
                 </div>
-                <div className="text-danger" style={{ color: 'red' }}>
-  <Delete onClick={() => deleteNotification(notification._id)} /> {/* Add the onClick handler */}
-</div>
-
               </div>
-            ))
-          ) : (
-            <p>No notifications</p>
-          )}
-        </div>
+              <Delete 
+                onClick={() => deleteNotification(notification._id)}
+                style={{ 
+                  color: '#ff4444',
+                  cursor: 'pointer',
+                  fontSize: '22px'
+                }} 
+              />
+            </div>
+          ))
+        ) : (
+          <div style={{
+            textAlign: 'center',
+            padding: '40px',
+            color: '#666',
+            fontSize: '18px'
+          }}>
+            No notifications available
+          </div>
+        )}
       </div>
     </div>
   );

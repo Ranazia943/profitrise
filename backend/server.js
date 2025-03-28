@@ -11,6 +11,7 @@ import support from "./routes/support.routes.js"
 import data from "./routes/totaldata.routes.js"
 import bankAccountRoutes from './routes/account.routes.js'
 import taskRoutes from './routes/task.routes.js'
+import usertaskRoutes from './routes/usertask.routes.js'
 import './cronJobs.js'; // Import for side effects (no named/default export)
 import dotenv from "dotenv";
 
@@ -35,6 +36,7 @@ app.use(
 
 // Add your routes and other middleware
 app.use('/api/tasks', taskRoutes);
+app.use('/api/usertask', usertaskRoutes);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/plan", plan);

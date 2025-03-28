@@ -4,91 +4,83 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import Groups2Icon from '@mui/icons-material/Groups2';
 // import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import { useState ,useEffect} from "react";
-import { Link ,useParams,useNavigate} from "react-router-dom";
+import { Link } from "react-router-dom";
 import WorkIcon from '@mui/icons-material/Work';
 import ForumIcon from '@mui/icons-material/Forum';
 import SportsKabaddiIcon from '@mui/icons-material/SportsKabaddi';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import { CurrencyExchange, Delete, Edit } from '@mui/icons-material';
-import { Button,Box ,TextField, Tooltip } from '@mui/material';
-import { toast } from "react-hot-toast"; // Import toast for notifications
+import { CircularProgress, Typography, Paper, Button, Box, Grid } from '@mui/material';
+import { useParams } from 'react-router-dom';
+import { toast } from 'react-hot-toast';  // Import react-hot-toast
+import dayjs from 'dayjs';  // Import dayjs to format the date
 import axios from 'axios';
-
-const AssignTask = () => {
-  const { planId } = useParams();
+const All_Task = () => {
+  const { planId } = useParams();  
   const [side, setSide] = useState(false)
-      const [isactive, setIsactive] = useState(0)
-      const [isopentoggle, setIsopentoggle] = useState(false) // Retrieve planId from the URL
-  const [taskDetails, setTaskDetails] = useState({
-    planId: planId,  // Initial planId from URL
-    type: '',  
-    price: '',  
-    url: '',  
-  });
-  const [loading, setLoading] = useState(false);
-  const [taskCreated, setTaskCreated] = useState(false);
-  const navigate = useNavigate();
-
-  // Log the planId to check if it's correctly passed from the URL
-  useEffect(() => {
-    console.log('Plan ID from URL:', planId);
-  }, [planId]);
-
-  // Handle form field changes
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setTaskDetails({
-      ...taskDetails,
-      [name]: name === 'price' ? parseFloat(value) : value,  // Ensure price is a number
-    });
-  };
-
-  // Handle form submission
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-  
-    // Validate task details before sending the request
-    if (!taskDetails.type || !taskDetails.price || !taskDetails.url) {
-      toast.error('All fields are required!');
-      setLoading(false);
-      return;
-    }
-  
-    try {
-      const baseURL = import.meta.env.VITE_API_BASE_URL;
-  
-      // Send the POST request to the server first
-      const response = await axios.post(`${baseURL}/api/tasks/create`, {
-        planId: taskDetails.planId,
-        type: taskDetails.type,
-        price: taskDetails.price,
-        url: taskDetails.url,
-      });
-  
-      // Check if the response is successful
-      if (response.status === 201) {
-        setTaskCreated(true);
-        toast.success("Task assigned successfully!");
-        // Only navigate after successful submission
-        setTimeout(() => {
-          navigate(`/admin/dashboard/allplans`);
-        }, 1500); // Short delay to show success message
-      }
-    } catch (error) {
-      console.error('Error creating task:', error.response ? error.response.data : error.message);
-      toast.error('Failed to create task');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [isactive, setIsactive] = useState(0)
+  const [isopentoggle, setIsopentoggle] = useState(false)// Retrieve planId from the URL params
+  const [tasks, setTasks] = useState([]);  // Store tasks
+  const [loading, setLoading] = useState(true);  // Track loading state
+  const [error, setError] = useState('');  // Track error state
+  const [fetchedDate, setFetchedDate] = useState('');  // Track the date when the tasks were fetched
   const isopen = (ind)=>{
     setIsactive(ind)
     setIsopentoggle(!isopentoggle)
 }
+  // Fetch tasks when the component is mounted or when planId changes
+  useEffect(() => {
+    const fetchTasks = async () => {
+      if (!planId) {
+        setError('Invalid Plan ID');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const baseURL = import.meta.env.VITE_API_BASE_URL;  // Ensure this is correct
+        const response = await axios.get(`${baseURL}/api/tasks/${planId}`);
+        setTasks(response.data.tasks);
+        setFetchedDate(dayjs().format('MMMM D, YYYY h:mm A'));  // Set the current date when tasks are fetched
+      } catch (err) {
+        setError('Error fetching tasks.');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTasks();  // Call fetch tasks function
+  }, [planId]);  // Dependency array ensures fetching when planId changes
+
+  // Handle task deletion
+  const deleteTask = async (taskId) => {
+    try {
+      const baseURL = import.meta.env.VITE_API_BASE_URL;
+      await axios.delete(`${baseURL}/api/tasks/${taskId}`);
+      // Remove the deleted task from the state
+      setTasks(tasks.filter((task) => task.taskId !== taskId));
+      toast.success('Task deleted successfully');  // Show success toast
+    } catch (err) {
+      console.error(err);
+      setError('Error deleting task.');
+    }
+  };
+
+  // Loading state
+  if (loading) {
+    return <CircularProgress />;
+  }
+
+  // Error state
+  if (error) {
+    return <Typography color="error">{error}</Typography>;
+  }
+
   return (
-    <div><div id="sidebar-wrapper" className={`${side ? "open":""}`}>
+
+      <div className="dashboard-wrapper">
+         <div id="sidebar-wrapper" className={`${side ? "open":""}`}>
                 <div className="sidebar">
                 <div className="close-icon flex justify-start ml-4  mt-4">
                  <i onClick={()=>setSide(false)} className="fa-solid border-2 px-1 rounded-md fa-xmark text-xl side-menu"></i>
@@ -192,70 +184,67 @@ const AssignTask = () => {
                 </ul>
                 </div>
             </div>
-          <div className="dashboard-side min-h-screen ">
-                <div className="close-icon bg-white inline-block">
-                 <i onClick={()=>setSide(true)} className="fa-solid fa-bars m-2 text-lg side-menu"></i>
-                </div>
-           <div className=" text-center" data-aos="fade-right"  data-aos-easing="linear" data-aos-duration="1800">
-           <h2 className="text-2xl font-extrabold bg-gradient-to-tr from-cyan-300 via-cyan-100 inline-block px-16 rounded-full text-gray-600 py-4">Assign Task to Plan</h2>
-           </div>
-
-         
-           <div className="plan-wrapper">
-        <div className="investment mt-20 mx-4 md:mx-10 lg:mx-16 pb-28">
-  <div className="wrapper grid grid-cols-1 min-[700px]:grid-cols-1 gap-4 md:gap-6 lg:gap-8">
-              <form onSubmit={handleSubmit}>
-                <TextField
-                  name="type"
-                  label="Task Name"
-                  variant="outlined"
-                  fullWidth
-                  value={taskDetails.type}
-                  onChange={handleChange}
-                  required
-                />
-
-                <TextField
-                  name="price"
-                  label="Task Price"
-                  variant="outlined"
-                  fullWidth
-                  margin="normal"
-                  type="number"
-                  value={taskDetails.price}
-                  onChange={handleChange}
-                  required
-                />
-
-                <TextField
-                  name="url"
-                  label="Task URL"
-                  variant="outlined"
-                  fullWidth
-                  margin="normal"
-                  value={taskDetails.url}
-                  onChange={handleChange}
-                  required
-                />
-
-                <Button type="submit" variant="contained" color="primary" disabled={loading} fullWidth>
-                  {loading ? <CircularProgress size={24} /> : 'Assign Task'}
-                </Button>
-              </form>
-
-              {taskCreated && (
-                <Typography variant="h6" color="green" mt={2}>
-                  Task assigned successfully! Redirecting...
-                </Typography>
-              )}
+            <div className="dashboard-side min-h-screen ">
+            <div className="close-icon bg-white inline-block">
+             <i onClick={()=>setSide(true)} className="fa-solid fa-bars m-2 text-lg side-menu"></i>
             </div>
-          </div>
-          </div>
-        </div>
+       <div className=" text-center" data-aos="fade-right"  data-aos-easing="linear" data-aos-duration="1800">
+       <h2 className="text-2xl font-extrabold bg-gradient-to-tr from-cyan-300 via-cyan-100 inline-block px-16 rounded-full text-gray-600 py-4">Plans</h2>
+       </div>
+        <div>
+        <div className="plan-wrapper">
       
-    </div>
 
+    <Paper elevation={3} style={{ padding: '20px', marginBottom:'50px', backgroundColor: '#f5f5f5' }}>
+      <Typography variant="h5" gutterBottom style={{ fontWeight: 'bold', color: '#333' }}>
+        Tasks for Plan: {tasks.length > 0 ? tasks[0].planName : 'No tasks available'}
+      </Typography>
+
+      {/* Display the date when tasks were fetched */}
+      <Typography variant="body2" style={{ fontStyle: 'italic', marginBottom: '20px' }}>
+        Tasks fetched on: {fetchedDate}
+      </Typography>
+
+      <Grid container spacing={2}>
+        {tasks.map((task) => (
+          <Grid item xs={12} sm={6} md={4} key={task.taskId}>  {/* Responsive layout */}
+            <Box sx={{
+              mb: 2,
+              p: 3,
+              border: '1px solid #ddd',
+              borderRadius: '8px',
+              backgroundColor: '#fff',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+              transition: 'transform 0.3s ease',
+              '&:hover': {
+                transform: 'scale(1)',
+                boxShadow: '0 6px 10px rgba(0, 0, 0, 0.15)',
+              },
+            }}>
+              <Typography variant="h6" style={{ fontWeight: 'bold', color: '#333' }}>{task.type} Task</Typography>
+              <Typography variant="body2" style={{ color: '#555', marginBottom: '10px' }}>
+                <strong>Price:</strong> ${task.price}
+              </Typography>
+              <Typography variant="body2" style={{ color: '#555', marginBottom: '10px' }}>
+                <strong>URL:</strong> <a href={task.url} target="_blank" rel="noopener noreferrer" style={{ color: '#007BFF' }}>{task.url}</a>
+              </Typography>
+              <Button
+                variant="contained"
+                color="error"
+                sx={{ mt: 2 }}
+                onClick={() => deleteTask(task.taskId)}  // Call delete task function
+                style={{ textTransform: 'none' }}
+              >
+                Delete Task
+              </Button>
+            </Box>
+          </Grid>
+        ))}
+      </Grid>
+    </Paper>
+    </div></div></div></div>
+    
   );
 };
 
-export default AssignTask;
+export default All_Task;

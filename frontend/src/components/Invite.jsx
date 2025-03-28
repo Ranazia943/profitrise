@@ -75,7 +75,7 @@ const Invite = () => {
               Invite Code
             </h2>
             <p className="italic text-center text-lg font-[350] text-black-600">
-              Invite your friends who are interested in earning profits. You will get a 3-level commission.
+              Invite your friends who are interested in earning profits. You will get 5% commission.
             </p>
             <div className="relative">
               <input

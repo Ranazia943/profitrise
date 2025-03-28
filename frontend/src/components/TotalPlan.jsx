@@ -5,11 +5,12 @@ import { useAuthContext } from "../authcontext/AuthContext";
 const TotalPlan = () => {
   const [userPlans, setUserPlans] = useState([]);
   const [loading, setLoading] = useState(true);  // Add loading state
+  const [tasksData, setTasksData] = useState({});  // To store tasks data by planId
   const { authUser } = useAuthContext(); // Authenticated user data from context
 
   useEffect(() => {
     if (authUser) {
-      const fetchTeamData = async () => {
+      const fetchUserData = async () => {
         try {
           const token = authUser.token || localStorage.getItem("token");
 
@@ -17,32 +18,54 @@ const TotalPlan = () => {
             console.error("No token found, authorization denied.");
             return;
           }
+
+          // Fetch user plans
           const baseURL = import.meta.env.VITE_API_BASE_URL;
           const response = await fetch(`${baseURL}/api/userplan/user/${authUser._id}`, {
             method: "GET",
-            headers: { 
+            headers: {
               "Content-Type": "application/json",
               "Authorization": `Bearer ${token}`,
             },
           });
 
           const data = await response.json();
-          console.log("API Response:", data);  // Log the response for debugging
+          console.log("User Plan Response:", data);
 
           if (response.ok) {
-            setUserPlans(data.purchasedPlans);  // Assuming the data has a purchasedPlans array
-            setLoading(false);  // Set loading to false once data is fetched
+            setUserPlans(data.purchasedPlans);
+            setLoading(false);
+            // After fetching user plans, fetch tasks for each active plan
+            fetchTasksForPlans(data.purchasedPlans);
           } else {
             console.error(data.message);
             setLoading(false);
           }
         } catch (error) {
-          console.error("Error fetching team data:", error);
+          console.error("Error fetching user data:", error);
           setLoading(false);
         }
       };
 
-      fetchTeamData();
+      // Fetch tasks for each plan
+      const fetchTasksForPlans = async (plans) => {
+        const tasksDataObj = {};  // Object to store tasks by planId
+        for (let plan of plans) {
+          if (plan.state === 'active') {  // Fetch tasks only for active plans
+            try {
+              const taskResponse = await axios.get(
+                `${import.meta.env.VITE_API_BASE_URL}/api/tasks/${plan.planId}`
+              );
+              tasksDataObj[plan.planId] = taskResponse.data.tasks;
+            } catch (error) {
+              console.error("Error fetching tasks for plan", plan.planId, error);
+            }
+          }
+        }
+        setTasksData(tasksDataObj);
+      };
+
+      fetchUserData();
     }
   }, [authUser]);
 
@@ -59,7 +82,7 @@ const TotalPlan = () => {
                 key={plan.planId}
                 className="p-4 border max-[700px]:w-[400px] max-[700px]:mx-auto max-[500px]:w-full group rounded-lg hover:-translate-y-2 duration-300 overflow-hidden bg-white"
               >
-                <h2 className="text-center font-[700] text-xl my-2 rounded-lg text-white">{plan.name}</h2>
+                <h2 className="text-center font-[700] text-xl my-2 rounded-lg ">{plan.name}</h2>
                 <div className="wrapp flex justify-between items-end">
                   <div>
                     <p>
@@ -84,6 +107,13 @@ const TotalPlan = () => {
                         {plan.state.charAt(0).toUpperCase() + plan.state.slice(1)} {/* Capitalize state */}
                       </span>
                     </p>
+
+                    {tasksData[plan.planId] && (
+                      <p>
+                        <span className="text-lg text-black font-[500]">Tasks: </span>
+                        <span className="text-black font-[350] text-base">{tasksData[plan.planId].length} tasks</span>
+                      </p>
+                    )}
                     <p>
                       <span className="text-lg text-black font-[500]">Start Date : </span>
                       <span className="text-black font-[350] text-base">{new Date(plan.startDate).toLocaleDateString()}</span>
@@ -92,6 +122,8 @@ const TotalPlan = () => {
                       <span className="text-lg text-black font-[500]">End Date : </span>
                       <span className="text-black font-[350] text-base">{new Date(plan.endDate).toLocaleDateString()}</span>
                     </p>
+                    {/* Display task count */}
+                    
                   </div>
                   <div>
                     {plan.state === 'pending' && (
@@ -109,8 +141,7 @@ const TotalPlan = () => {
                         Plan Rejected
                       </button>
                     )}
-
-{plan.state === 'completed' && (
+                    {plan.state === 'completed' && (
                       <button className="px-4 py-2 text-lg font-[500] bg-gray-500 rounded-md text-white group-hover:bg-gray-400 duration-300">
                         Completed Plan
                       </button>

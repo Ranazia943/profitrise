@@ -1,31 +1,34 @@
 import Task from '../models/task.model.js';
-import Earnings from '../models/earning.model.js';
-import UserPlan from '../models/userplan.model.js';
+import Plan from '../models/plan.model.js';
+import Earnings from '../models/earning.model.js';  // To update the user's earnings
+import mongoose from 'mongoose';
 
-
-export const createTaskForUser = async (req, res) => {
+// Create Task for a Plan
+export const createTaskForPlan = async (req, res) => {
     try {
-        const { userId, planId, taskName, taskPrice, taskUrl } = req.body;
+        const { planId, type, price, url } = req.body;
 
         // Validate the task data
-        if (!userId || !planId || !taskName || !taskPrice || !taskUrl) {
+        if (!planId || !type || !price || !url) {
             return res.status(400).json({ message: 'Missing required fields' });
         }
 
-        // Validate task type (taskName can only be 'website visit' or 'youtube video')
-        if (!['website visit', 'youtube video'].includes(taskName)) {
-            return res.status(400).json({ message: 'Invalid task type' });
+        
+        // Check if the plan exists
+        const plan = await Plan.findById(planId);
+        if (!plan) {
+            return res.status(404).json({ message: 'Plan not found' });
         }
 
-        // Your existing logic here...
+        // Create a new task for the plan
         const newTask = new Task({
-            userId,
-            planId,
-            type: taskName,  // taskName from the frontend, saved as type
-            url: taskUrl,
-            price: taskPrice,
+            planId,  // Linking task to a plan
+            type,  // task type (website visit or youtube video)
+            url,
+            price,
         });
 
+        // Save the task
         const savedTask = await newTask.save();
         return res.status(201).json({ message: 'Task created successfully', task: savedTask });
 
@@ -35,73 +38,138 @@ export const createTaskForUser = async (req, res) => {
     }
 };
 
+
+export const addEarningsOnTaskVisit = async (req, res) => {
+    const { taskId } = req.params;
+    const userId = req.user.id; // From protect middleware
   
-// Task Completion Logic
-export const completeTask = async (req, res) => {
-  const { taskId } = req.body;
+    try {
+      // 1. Find the task
+      const task = await Task.findById(taskId);
+      if (!task) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+  
+      // 2. Update user's earnings
+      let earnings = await Earnings.findOneAndUpdate(
+        { userId },
+        { 
+          $inc: { totalEarnings: task.price },
+          $push: {
+            dailyEarnings: {
+              date: new Date().setHours(0, 0, 0, 0),
+              amount: task.price
+            }
+          }
+        },
+        { new: true, upsert: true }
+      );
+  
+      // 3. Return success response
+      return res.status(200).json({
+        success: true,
+        message: 'Earnings added successfully',
+        amountAdded: task.price,
+        totalEarnings: earnings.totalEarnings
+      });
+  
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  };
 
-  try {
-    // Find the task by ID
-    const task = await Task.findById(taskId);
+// Fetch Task Details by Task ID
+export const getTaskDetailsByTaskId = async (req, res) => {
+    const { taskId } = req.params; // Get taskId from the route params
 
-    if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
+    // Validate if taskId is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(taskId)) {
+        return res.status(400).json({ message: 'Invalid Task ID' });
     }
 
-    // Check if task is already completed
-    if (task.status === 'completed') {
-      return res.status(400).json({ message: 'Task already completed' });
+    try {
+        // Fetch the task by taskId and populate the plan name
+        const task = await Task.findById(taskId).populate('planId', 'name'); // Populate the plan's name
+
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        // Return task details
+        return res.status(200).json({
+            taskId: task._id,
+            type: task.type,
+            price: task.price,
+            url: task.url,
+            planName: task.planId.name,  // Populate the plan name here
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+
+export const getTasksAndPlanNameByPlanId = async (req, res) => {
+    const { planId } = req.params;  // Get planId from the route params
+
+    // Validate if planId is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(planId)) {
+        return res.status(400).json({ message: 'Invalid Plan ID' });
     }
 
-    // Mark task as completed
-    task.status = 'completed';
-    task.endDate = new Date();
-    await task.save();
+    try {
+        // Fetch tasks related to this plan and populate the plan's name
+        const tasks = await Task.find({ planId })
+            .populate('planId', 'name');  // Populate only the plan's name
 
-    // Update earnings for the user
-    const earnings = await Earnings.findOne({ userId: task.userId });
+        if (!tasks || tasks.length === 0) {
+            return res.status(404).json({ message: 'No tasks found for this plan' });
+        }
 
-    if (!earnings) {
-      return res.status(404).json({ message: 'Earnings not found for this user' });
+        // Return the tasks with the plan name
+        return res.status(200).json({
+            tasks: tasks.map(task => ({
+                taskId: task._id,
+                type: task.type,
+                price: task.price,
+                url: task.url,
+                planName: task.planId.name,  // Add the populated plan name here
+            }))
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+
+// Delete Task
+export const deleteTask = async (req, res) => {
+    const { taskId } = req.params; // Get taskId from the route params
+
+    // Validate if taskId is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(taskId)) {
+        return res.status(400).json({ message: 'Invalid Task ID' });
     }
 
-    // Add the task price to the user's total earnings
-    earnings.totalEarnings += task.price;
+    try {
+        // Find the task by ID and delete it
+        const task = await Task.findByIdAndDelete(taskId);
 
-    // Add the daily earnings
-    earnings.dailyEarnings.push({
-      date: new Date(),
-      amount: task.price,
-    });
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
 
-    await earnings.save();
-
-    // Return success response
-    return res.status(200).json({ message: 'Task completed and earnings updated', task });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
+        // Return success response
+        return res.status(200).json({ message: 'Task deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
 };
 
 
 
-
-export const getTasksByUserAndPlanId = async (req, res) => {
-  const { userId, planId } = req.params; // Get userId and planId from the route params
-
-  try {
-    // Fetch tasks related to this user and plan using both userId and planId
-    const tasks = await Task.find({ userId, planId });
-
-    if (!tasks || tasks.length === 0) {
-      return res.status(404).json({ message: 'No tasks found for this user and plan' });
-    }
-
-    // Return tasks
-    return res.status(200).json({ tasks });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Server error' });
-  }
-};
+  

@@ -1,21 +1,18 @@
-import express from "express";
-import {
-  addPlan,
-  fetchAllPlans,
-  deletePlan, 
-} from "../controllers/plans.controller.js";
+import express from 'express';
+import { getPlans, addPlan, checkPlanExistence, deletePlanById } from '../controllers/plans.controller.js';
 
 const router = express.Router();
 
-// Route to Add a New Plan
-router.post("/add", addPlan);
+// Route for checking plan existence
+router.get('/check/:name', checkPlanExistence);
 
-// Route to Fetch All Plans
-router.get("/all", fetchAllPlans);
+// Route for adding a new plan
+router.post('/add', addPlan);
 
-// Route to Update a Plan
+// Route for getting all plans
+router.get('/all', getPlans);
 
-// Route to Delete a Plan
-router.delete("/delete/:id", deletePlan);
+// Route for deleting a plan by ID
+router.delete('/delete/:id', deletePlanById);
 
 export default router;

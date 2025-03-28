@@ -2,14 +2,23 @@ import mongoose from 'mongoose';
 
 const planSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
+    name: {
+      type: String,
+      required: true,
+      enum: [
+        'Start',
+        'Basic',
+        'Gold',
+        'Platinum',
+        'Diamond',
+      ], // Only these predefined names are allowed
+    },
     price: { type: Number, required: true },
-    duration: { type: Number, required: true }, // Duration in days
-    dailyProfit: { type: Number, required: true }, // Daily profit from this plan
+    duration: { type: Number, required: true },
+    dailyProfit: { type: Number, required: true },
     totalProfit: { type: Number, required: true },
     startDate: { type: Date },
-    endDate: { type: Date }, // Total profit from this plan
-  
+    endDate: { type: Date },
   },
   { timestamps: true }
 );

@@ -45,7 +45,11 @@ import ForgotPassword from "./components/ForgotPassword";
 import ResetPassword from "./components/ResetPassword";
 import AssignTask from "./components/admin/AssignTask"; // Adjust the path as needed
 import Usertask from './components/User_task'
+import { Toaster } from "react-hot-toast";  // Import Toaster component
+import All_Task from "./components/admin/All_Task"
+import TaskCount from './components/TaskCount'
 const App = () => {
+  
   const location = useLocation();
   const { authUser } = useAuthContext(); // Access auth state
   const [unreadCount, setUnreadCount] = useState(0);  // State to manage unread notifications
@@ -70,7 +74,8 @@ const App = () => {
     "/admin/dashboard/add_aboutdetail",
     "/admin/dashboard/userdetail/:id",
     "/admin/dashboard/withdrawl_aciton/:id",
-    "/admin/dashboard/sendmail"
+    "/admin/dashboard/sendmail",
+    "/admin/dashboard/alltask/:planId"
   ];
 
   const shouldShowNavbar = !hideNavbarRoutes.includes(location.pathname);
@@ -79,6 +84,7 @@ const App = () => {
     <div>
       {/* Conditionally render Navbar */}
       {shouldShowNavbar && <Navbar unreadCount={unreadCount} />}
+      <Toaster position="top-center" reverseOrder={false} />  {/* Optional positioning and order */}
 
       <Routes>
         {/* Public Routes */}
@@ -103,6 +109,7 @@ const App = () => {
         <Route path="/approve" element={<ProtectedRoute><Approved /></ProtectedRoute>} />
         <Route path="/usertask" element={<ProtectedRoute><Usertask /></ProtectedRoute>} />
         <Route path="/notification" element={<ProtectedRoute><Notification setUnreadCount={setUnreadCount} /></ProtectedRoute>} />
+        <Route path="/taskcount/:taskId" element={<TaskCount />} /> {/* Dynamic task page */}
 
         {/* Admin Routes */}
          {/* Admin Routes */}
@@ -114,8 +121,17 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+  <Route
+  path="/admin/dashboard/alltask/:planId"
+  element={
+    <ProtectedRoute isAdminRoute={true}>
+      <All_Task />
+    </ProtectedRoute>
+  }
+/>
+
           <Route
-  path="/admin/dashboard/assign-task/:userId/:planId"
+  path="/admin/dashboard/assignTask/:planId"
   element={
     <ProtectedRoute isAdminRoute={true}>
       <AssignTask />
